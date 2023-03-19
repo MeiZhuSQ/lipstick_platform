@@ -5,7 +5,7 @@
         </div>
         <div class="panel-body" th:if="${not #strings.isEmpty(webAbout)}">
             <ul>
-                <p th:text="${webAbout.abName}" class="abname"></p><div style="color: lightseagreen;font-weight: bold;">欢迎您，疫情无情人有情，公益物资互助平台助您身体健康！</div>
+                <p th:text="${webAbout.abName}" class="abname"></p><div style="color: lightseagreen;font-weight: bold;">欢迎您，口红种草交流平台祝您永葆青春、身体健康！</div>
                 <!-- 屏蔽 iframe -->
                 <div style="width:280px;height:50px;position:absolute;filter:alpha(opacity=0);top:0;left:0;"></div>
                 <!--    2345天气插件官网            https://tianqi.2345.com/plugin/-->
@@ -16,7 +16,7 @@
         </div>
 
         <div class="panel-body" th:if="${#strings.isEmpty(webAbout)}">
-            登录互助平台，帮助你我他！<a style="height: auto;" href="/login">&nbsp;&nbsp;点击登录</a>
+            登录平台，来种草吧！<a style="height: auto;" href="/login">&nbsp;&nbsp;点击登录</a>
         </div>
 
 
@@ -25,7 +25,7 @@
 
     <div class="tag panel panel-default">
         <div class="panel-heading">
-            <h3 class="panel-title">互助类型</h3>
+            <h3 class="panel-title">类型</h3>
         </div>
         <div class="panel-body channel" style="overflow: hidden">
             <ul>
@@ -42,7 +42,7 @@
 
     <div class="tag panel panel-default">
         <div class="panel-heading">
-            <h3 class="panel-title">物资标签</h3>
+            <h3 class="panel-title">口红标签</h3>
         </div>
         <div class="panel-body panel-body-high" id="tagcloud" style="overflow: hidden">
             <a class="btn btn-default btn-xs" th:each="item:${mtoTagList}" th:href="@{${'/blog/tag/'+item.id}}"

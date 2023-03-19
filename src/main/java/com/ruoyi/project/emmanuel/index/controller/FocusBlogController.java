@@ -79,4 +79,27 @@ public class FocusBlogController {
         modelMap.put("categoryList", categoryList);
         return prefix + "/donate";
     }
+
+    @GetMapping("/want")
+    public String want(ModelMap modelMap,
+                        @RequestParam(value = "currentPage", defaultValue = "1") Long currentPage,
+                        @RequestParam(value = "currentSize", defaultValue = "20") Long currentSize) {
+        focusBlogService.selectIndexInfo(modelMap, currentPage, currentSize);
+
+        // 获取分类
+        MtoChannel mtoChannel = new MtoChannel();
+        List<MtoChannel> channelList = mtoChannelService.selectMtoChannelList(mtoChannel);
+        modelMap.put("channelList", channelList);
+
+        // 获取标签
+        List<MtoTag> tagList = mtoPostService.selectMtoTagList();
+        modelMap.put("tagList", tagList);
+
+        // 获取导航栏
+        MtoCategory category = new MtoCategory();
+        category.setStatus(1);
+        List<MtoCategory> categoryList = mtoCategoryService.selectCategories(category);
+        modelMap.put("categoryList", categoryList);
+        return prefix + "/want";
+    }
 }
