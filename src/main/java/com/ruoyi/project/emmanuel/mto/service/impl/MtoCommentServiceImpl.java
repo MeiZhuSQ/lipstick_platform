@@ -1,5 +1,6 @@
 package com.ruoyi.project.emmanuel.mto.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -9,13 +10,19 @@ import com.ruoyi.common.utils.ToolUtils;
 import com.ruoyi.common.utils.security.ShiroUtils;
 import com.ruoyi.common.utils.text.Convert;
 import com.ruoyi.project.emmanuel.mto.domain.MtoComment;
+import com.ruoyi.project.emmanuel.mto.domain.MtoPostTag;
+import com.ruoyi.project.emmanuel.mto.domain.UserPortrait;
 import com.ruoyi.project.emmanuel.mto.mapper.MtoCommentMapper;
+import com.ruoyi.project.emmanuel.mto.mapper.MtoPostTagMapper;
+import com.ruoyi.project.emmanuel.mto.mapper.UserPortraitMapper;
 import com.ruoyi.project.emmanuel.mto.service.IMtoCommentService;
 import com.ruoyi.project.emmanuel.mto.service.IWebPostService;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.ModelMap;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +36,12 @@ public class MtoCommentServiceImpl extends ServiceImpl<MtoCommentMapper, MtoComm
 
     @Autowired
     private IWebPostService postService;
+
+    @Resource
+    private MtoPostTagMapper mtoPostTagMapper;
+
+    @Resource
+    private UserPortraitMapper userPortraitMapper;
 
     @Override
     public void messageBoard(ModelMap modelMap) {
@@ -60,6 +73,18 @@ public class MtoCommentServiceImpl extends ServiceImpl<MtoCommentMapper, MtoComm
         String ipAddr = IpUtils.getIpAddr(request);
         comment.setIp(ToolUtils.isEmpty(IpUtils.inetAton(ipAddr)) ? null : String.valueOf(IpUtils.inetAton(ipAddr)));
         comment.setCreateTime(DateUtils.getNowDate());
+        // 埋点记录用户标签
+        List<MtoPostTag> mtoPostTags = mtoPostTagMapper.selectList(new LambdaQueryWrapper<MtoPostTag>().eq(MtoPostTag::getPostId, comment.getPostId()));
+        if (CollectionUtils.isNotEmpty(mtoPostTags)) {
+            for (MtoPostTag mtoPostTag : mtoPostTags) {
+                UserPortrait userPortrait = new UserPortrait();
+                userPortrait.setUserId(ShiroUtils.getUserId());
+                userPortrait.setTagId(mtoPostTag.getTagId());
+                userPortrait.setCreateBy(ShiroUtils.getUserId() + "");
+                userPortrait.setCreateTime(DateUtils.getNowDate());
+                userPortraitMapper.insert(userPortrait);
+            }
+        }
         return commentMapper.insert(comment);
     }
 

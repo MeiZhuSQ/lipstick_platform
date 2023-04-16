@@ -121,13 +121,11 @@
             <!-- 点赞 打赏 -->
             <div class="thumbs-content">
                 <span class="thumbs-button fa fa-thumbs-up"> 点赞 <span id="loveCount" th:text="${mtoPost.favors}"></span></span>
-                <span id="wantDonate" class="reward-button fa fa-money" th:if="${mtoPost.channelId == 18}"> 我想捐赠</span>
-                <span id="wantApply" class="reward-button fa fa-money" th:if="${mtoPost.channelId == 19}"> 我想申领</span>
             </div>
         </div>
 
         <!--      评论-->
-        <!--<div id="comment" class="comment comment-main">
+        <div id="comment" class="comment comment-main">
             <div class="comment-title">发表评论</div>
             <form id="comment-form" class="form-horizontal mt-10">
                 <input id="articleId" name="postId" type="hidden" th:value="${mtoPost.id}">
@@ -155,7 +153,7 @@
             <hr class="hr0 mt-15"/>
             <ul id="comment-ul" class="comment">
             </ul>
-        </div>-->
+        </div>
         <!--      评论-->
 
 

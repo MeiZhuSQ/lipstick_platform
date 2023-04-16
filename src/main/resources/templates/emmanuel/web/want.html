@@ -88,16 +88,22 @@
                     <!-- 右侧-->
                     <div class="col-lg-4 ">
                         <div class="form-group col-xs-12">
-                            <label class=" control-label is-required">互助类型：</label>
+                            <label class=" control-label is-required">种草类型：</label>
                             <select class="form-control  noselect2 selectpicker" data-placeholder="请选择类型" id="channelId"
-                                    name="channelId">
-                                <option th:text="我要求助" th:value="18" th:selected="true"></option>
+                                    name="channelId"
+                                    required>
+                                <option value="">请选择</option>
+                                <option th:each="channel:${channelList}"
+                                        th:value="${channel.id}"
+                                        th:text="${channel.name} + (${channel.type == 2} ? '-专题':'-分类')"
+                                        th:selected="${mtoPost?.channelId}==${channel.id}"
+                                ></option>
                             </select>
                         </div>
 
                         <div class="form-group col-xs-12">
-                            <label class="font-noraml">药物标签</label>
-                            <select id="tag" class="form-control noselect2 selectpicker" data-none-selected-text="请选择求助标签"
+                            <label class="font-noraml">种草标签</label>
+                            <select id="tag" class="form-control noselect2 selectpicker" data-none-selected-text="请选择种草标签"
                                     multiple>
                                 <option th:each="tag:${tagList}"
                                         th:value="${tag.id}"
@@ -105,17 +111,9 @@
                                 ></option>
                             </select>
                         </div>
-                        <div class="form-group col-xs-12">
-                            <label class="font-noraml">所在地：</label>
-                            <label class="font-noraml" style="color: red;">注意：请按照省、市、县/区格式填写，如北京市海淀区，湖北省黄冈市黄梅县</label>
-                            <div class="ml-3">
-                                <input type="text" class="form-control" id="summary" name="summary"
-                                       placeholder="请输入所在地点" required>
-                            </div>
-                        </div>
 
                         <div class="form-group col-xs-12">
-                            <label class="control-label">求助封面：</label>
+                            <label class="control-label">种草封面：</label>
                             <div class="ml-3">
                                 <input name="thumbnail" id="thumbnail" class="form-control">
                                 <a id="url"><img style="width: 90px;height: 90px"></a>

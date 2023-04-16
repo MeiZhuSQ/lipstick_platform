@@ -57,6 +57,9 @@ public interface IWebPostService extends IService<WebMtoPost> {
      */
     String selectIndexInfo(ModelMap modelMap, HttpServletRequest request, HttpServletResponse response, Long currentPage, Long currentSize);
 
+    String selectRecommendIndex(ModelMap modelMap, HttpServletRequest request, HttpServletResponse response, Long currentPage, Long currentSize);
+
+
     /**
      * 根据导航栏id查询
      *

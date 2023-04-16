@@ -75,6 +75,23 @@ public class WebPostController extends BaseController {
     }
 
     /**
+     * 推荐
+     *
+     * @param modelMap
+     * @param request
+     * @param response
+     * @param currentPage 当前页
+     * @param currentSize 页大小
+     * @return
+     */
+    @GetMapping("/recommend")
+    public String recommend(ModelMap modelMap, @RequestParam(value = "currentPage", defaultValue = "1") Long currentPage, @RequestParam(value = "currentSize", defaultValue = "10") Long currentSize, HttpServletRequest request, HttpServletResponse response) {
+        currentSize = currentSize > 50 ? 50 : currentSize;
+        String url = postService.selectRecommendIndex(modelMap, request, response, currentPage, currentSize);
+        return ToolUtils.isEmpty(url) ? prefix + "/index" : url;
+    }
+
+    /**
      * 根据导航栏id查询
      *
      * @param modelMap

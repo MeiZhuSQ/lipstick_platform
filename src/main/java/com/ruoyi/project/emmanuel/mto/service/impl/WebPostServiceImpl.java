@@ -1,6 +1,7 @@
 package com.ruoyi.project.emmanuel.mto.service.impl;
 
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -21,6 +22,7 @@ import com.ruoyi.project.system.record.domain.AssistanceRecord;
 import com.ruoyi.project.system.record.mapper.AssistanceRecordMapper;
 import com.ruoyi.project.system.user.domain.User;
 import com.ruoyi.project.system.user.mapper.UserMapper;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,7 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 @Service
@@ -74,12 +77,19 @@ public class WebPostServiceImpl extends ServiceImpl<WebPostMapper, WebMtoPost> i
     @Resource
     private AssistanceRecordMapper assistanceRecordMapper;
 
+    @Resource
+    private UserPortraitMapper userPortraitMapper;
+
+    @Resource
+    private MtoPostTagMapper mtoPostTagMapper;
+
+
     // @Resource
     // private ThreadPoolExecutor executor;
     private ThreadPoolTaskExecutor executor = SpringUtils.getBean("threadPoolTaskExecutor");
 
     /**
-     * 获取首页文章
+     * 获取首页帖子
      *
      * @param webMtoPost
      * @param currentPage 当前页
@@ -95,7 +105,7 @@ public class WebPostServiceImpl extends ServiceImpl<WebPostMapper, WebMtoPost> i
         // 分页
         Page<WebMtoPost> postPage = new Page<>(currentPage, currentSize);
         TableDataInfo dataInfo = new TableDataInfo();
-        // 根据栏目id查询
+        // 根据分类id查询
         Page<WebMtoPost> mtoPostPage = postMapper.selectPage(postPage, webMtoPost);
         if (ToolUtils.isNotEmpty(mtoPostPage)) {
             dataInfo.setRows(mtoPostPage.getRecords());
@@ -108,6 +118,105 @@ public class WebPostServiceImpl extends ServiceImpl<WebPostMapper, WebMtoPost> i
             dataInfo.setTotalPage(mtoPostPage.getPages());
         }
         return dataInfo;
+    }
+
+    public TableDataInfo selectIndexPostList2(WebMtoPost webMtoPost, Long currentPage, Long currentSize) {
+
+        // 搜索关键字
+        String keyword = webMtoPost.getTitle();
+
+        // 分页
+        Page<WebMtoPost> postPage = new Page<>(currentPage, currentSize);
+        TableDataInfo dataInfo = new TableDataInfo();
+        // 根据分类id查询
+        Page<WebMtoPost> mtoPostPage = postMapper.selectPage(postPage, webMtoPost);
+
+        if (ToolUtils.isNotEmpty(mtoPostPage)) {
+            // 推荐规则 用户点赞、评论，帖子，埋点记录用户感兴趣的标签。统计该用户兴趣标签排行
+            List<UserPortrait> userPortraits = userPortraitMapper.selectList(new LambdaQueryWrapper<UserPortrait>().eq(UserPortrait::getUserId, ShiroUtils.getUserId()));
+            // 获取感兴趣的每个标签的数量
+            Map<String, Long> map = userPortraits.stream().collect(Collectors.groupingBy(UserPortrait::getTagId, Collectors.counting()));
+            List<WebMtoPost> records = mtoPostPage.getRecords();
+            AtomicReference<List<WebMtoPost>> collect1 = new AtomicReference<>();
+            AtomicReference<List<WebMtoPost>> collect2 = new AtomicReference<>();
+            AtomicReference<List<WebMtoPost>> collect3 = new AtomicReference<>();
+            map.forEach((k, v) -> {
+                // k是标签ID，v是得分
+                if (v == getMaxValue(map, 1)) {
+                    System.out.println(111);
+                    // 查询得分最高的标签，查询该标签所关联的帖子
+                    List<MtoPostTag> mtoPostTags = mtoPostTagMapper.selectList(new LambdaQueryWrapper<MtoPostTag>().eq(MtoPostTag::getTagId, k));
+                    // 关联的帖子
+                    Set<Long> collect = mtoPostTags.stream().map(MtoPostTag::getPostId).collect(Collectors.toSet());
+                    // 过滤成推荐关联的帖子
+                    collect1.set(records.stream().filter(record -> collect.contains(record.getId())).collect(Collectors.toList()));
+                }
+
+            });
+            if (map.size() >= 2) {
+                map.forEach((k, v) -> {
+                    if (v == getMaxValue(map, 2)) {
+                        System.out.println(222);
+                        // 查询得分第二高的标签，查询该标签所关联的帖子
+                        List<MtoPostTag> mtoPostTags = mtoPostTagMapper.selectList(new LambdaQueryWrapper<MtoPostTag>().eq(MtoPostTag::getTagId, k));
+                        // 关联的帖子
+                        Set<Long> collect = mtoPostTags.stream().map(MtoPostTag::getPostId).collect(Collectors.toSet());
+                        // 过滤成推荐关联的帖子
+                        collect2.set(records.stream().filter(record -> collect.contains(record.getId())).collect(Collectors.toList()));
+                    }
+                });
+            }
+            if (map.size() >= 3) {
+                map.forEach((k, v) -> {
+                    if (v == getMaxValue(map, 3)) {
+                        System.out.println(222);
+                        // 查询得分第三高的标签，查询该标签所关联的帖子
+                        List<MtoPostTag> mtoPostTags = mtoPostTagMapper.selectList(new LambdaQueryWrapper<MtoPostTag>().eq(MtoPostTag::getTagId, k));
+                        // 关联的帖子
+                        Set<Long> collect = mtoPostTags.stream().map(MtoPostTag::getPostId).collect(Collectors.toSet());
+                        // 过滤成推荐关联的帖子
+                        collect3.set(records.stream().filter(record -> collect.contains(record.getId())).collect(Collectors.toList()));
+                    }
+                });
+            }
+            List<WebMtoPost> webMtoPosts1 = collect1.get();
+            List<WebMtoPost> webMtoPosts2 = collect2.get();
+            List<WebMtoPost> webMtoPosts3 = collect3.get();
+            if (webMtoPosts1 != null) {
+                if (webMtoPosts2 != null) {
+                    webMtoPosts1.addAll(webMtoPosts2);
+                }
+                if (webMtoPosts3 != null) {
+                    webMtoPosts1.addAll(webMtoPosts3);
+                }
+            }
+            dataInfo.setRows(webMtoPosts1);
+            if (StringUtils.isNotEmpty(keyword)) {
+                mtoPostPage.getRecords().forEach(e -> e.setTitle(this.getHitCode(e.getTitle(), keyword)));
+            }
+            dataInfo.setTotal(mtoPostPage.getTotal());
+            dataInfo.setCurrentPage(mtoPostPage.getCurrent());
+            dataInfo.setCurrentSize(mtoPostPage.getSize());
+            dataInfo.setTotalPage(mtoPostPage.getPages());
+        }
+
+        return dataInfo;
+    }
+
+    /**
+     * 求Map<K,V>中Value(值)的最大值
+     *
+     * @param map
+     * @return
+     */
+    public static Object getMaxValue(Map<String, Long> map, int num) {
+        if (map == null)
+            return null;
+        int length =map.size();
+        Collection<Long> c = map.values();
+        Object[] obj = c.toArray();
+        Arrays.sort(obj);
+        return obj[length-num];
     }
 
     /**
@@ -150,7 +259,7 @@ public class WebPostServiceImpl extends ServiceImpl<WebPostMapper, WebMtoPost> i
     }
 
     /**
-     * 博客查看
+     * 帖子查看
      *
      * @param id
      * @return
@@ -206,6 +315,21 @@ public class WebPostServiceImpl extends ServiceImpl<WebPostMapper, WebMtoPost> i
         return null;
     }
 
+    @Override
+    public String selectRecommendIndex(ModelMap modelMap, HttpServletRequest request, HttpServletResponse response, Long currentPage, Long currentSize) {
+        // 获取帖子列表
+        this.loadMainPage2(modelMap, new WebMtoPost(), currentPage, currentSize);
+        // 获取导航
+        this.selectCategory(modelMap);
+        // 获取侧边栏
+        this.publicWeb(modelMap);
+        // 获取轮播图
+        if (Objects.equals(1L, currentPage)) {
+            this.sliderList(modelMap);
+        }
+        return null;
+    }
+
     /**
      * 获取首页数据
      *
@@ -214,7 +338,7 @@ public class WebPostServiceImpl extends ServiceImpl<WebPostMapper, WebMtoPost> i
      * @param currentSize 当页数量
      */
     private void getIndexData(ModelMap modelMap, Long currentPage, Long currentSize) {
-        // 获取文章列表
+        // 获取帖子列表
         this.loadMainPage(modelMap, new WebMtoPost(), currentPage, currentSize);
         // 获取导航
         this.selectCategory(modelMap);
@@ -292,7 +416,7 @@ public class WebPostServiceImpl extends ServiceImpl<WebPostMapper, WebMtoPost> i
     }
 
     /**
-     * 获取文章列表
+     * 获取帖子列表
      *
      * @param modelMap
      * @param webMtoPost
@@ -314,6 +438,23 @@ public class WebPostServiceImpl extends ServiceImpl<WebPostMapper, WebMtoPost> i
         }
 
     }
+
+    private void loadMainPage2(ModelMap modelMap, WebMtoPost webMtoPost, Long currentPage, Long currentSize) {
+
+        // 获取博客
+        // CompletableFuture<Void> postFuture = CompletableFuture.runAsync(() -> {
+            TableDataInfo postList = this.selectIndexPostList2(webMtoPost, currentPage, currentSize);
+            modelMap.put("dataInfo", postList);
+        //}, executor);
+
+        /*try {
+            CompletableFuture.allOf(postFuture).get();
+        } catch (Exception e) {
+            throw new RuntimeException("异步编程发生错误: " + e.getMessage());
+        }*/
+
+    }
+
 
     /**
      * 获取导航懒
@@ -372,7 +513,6 @@ public class WebPostServiceImpl extends ServiceImpl<WebPostMapper, WebMtoPost> i
             // webAbout.setAbAvatar(user.getAvatar());
             webAbout.setAbName(user.getUserName());
         }
-        // webAbout.setAbText("90后少年，热爱写bug，热爱编程，热爱学习，分享一些个人经验，共同学习，少走弯路。Talk is cheap,show me the code!");
         modelMap.put("webAbout", webAbout);
 
         // 获取分类
@@ -406,7 +546,7 @@ public class WebPostServiceImpl extends ServiceImpl<WebPostMapper, WebMtoPost> i
             CacheUtils.put(Constants.WEB_TAG, JSONObject.toJSON(mtoTagList));
         }, executor);
 
-        // 获取最新文章
+        // 获取最新帖子
         CompletableFuture<Void> newPostFuture = CompletableFuture.runAsync(() -> {
             // 先查询缓存，如果存在，直接返回
             Object newBlogObj = CacheUtils.get(Constants.WEB_NEW_BLOG);
@@ -422,7 +562,7 @@ public class WebPostServiceImpl extends ServiceImpl<WebPostMapper, WebMtoPost> i
 
         }, executor);
 
-        // 获取最热文章
+        // 获取最热帖子
         CompletableFuture<Void> hotPostFuture = CompletableFuture.runAsync(() -> {
             // 先查询缓存，如果存在，直接返回
             Object hotBlogObj = CacheUtils.get(Constants.WEB_HOT_BLOG);
@@ -437,7 +577,7 @@ public class WebPostServiceImpl extends ServiceImpl<WebPostMapper, WebMtoPost> i
             CacheUtils.put(Constants.WEB_HOT_BLOG, JSONObject.toJSON(hotPostList));
         }, executor);
 
-        // 获取推荐文章
+        // 获取推荐帖子
         CompletableFuture<Void> recommendPostFuture = CompletableFuture.runAsync(() -> {
             // 先查询缓存，如果存在，直接返回
             Object recommendBlogObj = CacheUtils.get(Constants.WEB_RECOMMEND_BLOG);
@@ -569,8 +709,8 @@ public class WebPostServiceImpl extends ServiceImpl<WebPostMapper, WebMtoPost> i
      * 点赞
      *
      * @param request
-     * @param postId     文章id
-     * @param favorsType 类型  1为文章点赞
+     * @param postId     帖子id
+     * @param favorsType 类型  1为帖子点赞
      * @return
      */
     @Override
@@ -598,6 +738,18 @@ public class WebPostServiceImpl extends ServiceImpl<WebPostMapper, WebMtoPost> i
         bizRepeatLog.setUserAgent(request.getHeader("User-Agent"));
         bizRepeatLog.setStatus(0);
         bizRepeatLogMapper.insert(bizRepeatLog);
+        // 埋点记录用户标签
+        List<MtoPostTag> mtoPostTags = mtoPostTagMapper.selectList(new LambdaQueryWrapper<MtoPostTag>().eq(MtoPostTag::getPostId, postId));
+        if (CollectionUtils.isNotEmpty(mtoPostTags)) {
+            for (MtoPostTag mtoPostTag : mtoPostTags) {
+                UserPortrait userPortrait = new UserPortrait();
+                userPortrait.setUserId(ShiroUtils.getUserId());
+                userPortrait.setTagId(mtoPostTag.getTagId());
+                userPortrait.setCreateBy(ShiroUtils.getUserId() + "");
+                userPortrait.setCreateTime(DateUtils.getNowDate());
+                userPortraitMapper.insert(userPortrait);
+            }
+        }
         return AjaxResult.success("点赞成功", i);
     }
 
@@ -866,7 +1018,7 @@ public class WebPostServiceImpl extends ServiceImpl<WebPostMapper, WebMtoPost> i
     }
 
     /**
-     * 生成前台博客静态页面
+     * 生成前台帖子静态页面
      *
      * @param request
      * @param response
